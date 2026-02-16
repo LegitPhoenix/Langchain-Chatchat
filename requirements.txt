@@ -60,3 +60,4 @@ streamlit-chatbox>=1.1.11
 streamlit-aggrid>=0.3.4.post3
 httpx[brotli,http2,socks]>=0.25.0
 watchdog
+langchain_core==1.0.6
