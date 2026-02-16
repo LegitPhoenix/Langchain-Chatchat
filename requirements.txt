@@ -61,3 +61,4 @@ streamlit-aggrid>=0.3.4.post3
 httpx[brotli,http2,socks]>=0.25.0
 watchdog
 langchain_core==1.0.5
+idna==3.6              # CVE-2024-3651
