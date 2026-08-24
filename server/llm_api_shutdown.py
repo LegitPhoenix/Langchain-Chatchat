@@ -10,19 +10,26 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import subprocess
 import argparse
+import psutil
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--serve", choices=["all", "controller", "model_worker", "openai_api_server"], default="all")
 
 args = parser.parse_args()
 
-base_shell = "ps -eo user,pid,cmd|grep fastchat.serve{}|grep -v grep|awk '{{print $2}}'|xargs kill -9"
-
 if args.serve == "all":
-    shell_script = base_shell.format("")
+    search_pattern = "fastchat.serve"
 else:
-    serve = f".{args.serve}"
-    shell_script = base_shell.format(serve)
+    search_pattern = f"fastchat.serve.{args.serve}"
 
-subprocess.run(shell_script, shell=True, check=True)
+killed_count = 0
+for proc in psutil.process_iter(['pid', 'cmdline']):
+    try:
+        cmdline = proc.info['cmdline']
+        if cmdline and any(search_pattern in arg for arg in cmdline):
+            proc.kill()
+            killed_count += 1
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+        pass
+
 print(f"llm api sever --{args.serve} has been shutdown!")
