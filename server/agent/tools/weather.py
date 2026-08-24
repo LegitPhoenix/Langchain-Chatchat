@@ -148,7 +148,22 @@ def get_weather(key, location_id, place):
         'location': location_id,
         'key': key,
     }
-    response = requests.get(url, params=params)
+    
+    # Validate URL against allowlist
+    from urllib.parse import urlparse
+    import re
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or parsed.netloc != "devapi.qweather.com":
+        raise ValueError("Invalid weather API URL")
+    
+    # Validate location_id format
+    if not re.match(r'^[a-zA-Z0-9]+$', location_id):
+        raise ValueError("Invalid location ID format")
+    
+    try:
+        response = requests.get(url, params=params)
+    except requests.exceptions.RequestException:
+        raise
     data = response.json()
     return format_weather_data(data, place)
 
