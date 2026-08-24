@@ -42,10 +42,16 @@ def launch_api(args,args_list=api_args,log_name=None):
         log_name = f"{LOG_PATH}api_{args.api_host}_{args.api_port}"
     print(f"logs on api are written in {log_name}")
     print(f"API日志位于{log_name}下，如启动异常请查看日志")
-    args_str = string_args(args,args_list)
-    api_sh = "python  server/{script} {args_str} >{log_name}.log 2>&1 &".format(
-        script="api.py",args_str=args_str,log_name=log_name)
-    subprocess.run(api_sh, shell=True, check=True)
+    
+    cmd_list = ['python', 'server/api.py']
+    for arg_name in args_list:
+        arg_value = getattr(args, arg_name.replace('-', '_'), None)
+        if arg_value is not None:
+            cmd_list.append(f'--{arg_name}')
+            cmd_list.append(str(arg_value))
+    
+    with open(f"{log_name}.log", 'w') as log_file:
+        subprocess.Popen(cmd_list, stdout=log_file, stderr=subprocess.STDOUT)
     print("launch api done!")
     print("启动API服务完毕.")
 
@@ -55,16 +61,20 @@ def launch_webui(args,args_list=web_args,log_name=None):
     if not log_name:
         log_name = f"{LOG_PATH}webui"
 
-    args_str = string_args(args,args_list)
+    cmd_list = ['streamlit', 'run', 'webui.py']
+    for arg_name in args_list:
+        arg_value = getattr(args, arg_name.replace('-', '_').replace('.', '_'), None)
+        if arg_value is not None:
+            cmd_list.append(f'--{arg_name}')
+            cmd_list.append(str(arg_value))
+    
     if args.nohup:
         print(f"logs on api are written in {log_name}")
         print(f"webui服务日志位于{log_name}下，如启动异常请查看日志")
-        webui_sh = "streamlit run webui.py {args_str} >{log_name}.log 2>&1 &".format(
-        args_str=args_str,log_name=log_name)
+        with open(f"{log_name}.log", 'w') as log_file:
+            subprocess.Popen(cmd_list, stdout=log_file, stderr=subprocess.STDOUT)
     else:
-        webui_sh = "streamlit run webui.py {args_str}".format(
-        args_str=args_str)
-    subprocess.run(webui_sh, shell=True, check=True)
+        subprocess.run(cmd_list, check=True)
     print("launch webui done!")
     print("启动webui服务完毕.")
 
