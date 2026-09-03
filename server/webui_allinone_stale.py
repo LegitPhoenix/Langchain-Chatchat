@@ -24,6 +24,7 @@ from server.llm_api_stale import string_args,launch_all,controller_args,worker_a
 
 from server.api_allinone_stale import parser, api_args
 import subprocess
+import re
 
 parser.add_argument("--use-remote-api",action="store_true")
 parser.add_argument("--nohup",action="store_true")
@@ -33,6 +34,17 @@ parser.add_argument("--theme.primaryColor",type=str,default='"#165dff"')
 parser.add_argument("--theme.secondaryBackgroundColor",type=str,default='"#f5f5f5"')
 parser.add_argument("--theme.textColor",type=str,default='"#000000"')
 web_args = ["server.port","theme.base","theme.primaryColor","theme.secondaryBackgroundColor","theme.textColor"]
+
+
+def validate_theme_base(value):
+    return value in ['"light"', '"dark"', 'light', 'dark']
+
+def validate_hex_color(value):
+    pattern = r'^"#[0-9a-fA-F]{6}"$'
+    return re.match(pattern, value) is not None
+
+def validate_port(value):
+    return isinstance(value, int) and 1 <= value <= 65535
 
 
 def launch_api(args,args_list=api_args,log_name=None):
@@ -46,6 +58,8 @@ def launch_api(args,args_list=api_args,log_name=None):
     cmd_list = ['python', 'server/api.py']
     for arg_name in args_list:
         arg_value = getattr(args, arg_name.replace('-', '_'), None)
+        if any(char in str(arg_value) for char in [';', '&', '|', '$', '`', '\n', '(', ')', '<', '>']):
+            raise ValueError(f"Invalid characters in argument {arg_name}: {arg_value}")
         if arg_value is not None:
             cmd_list.append(f'--{arg_name}')
             cmd_list.append(str(arg_value))
@@ -64,6 +78,12 @@ def launch_webui(args,args_list=web_args,log_name=None):
     cmd_list = ['streamlit', 'run', 'webui.py']
     for arg_name in args_list:
         arg_value = getattr(args, arg_name.replace('-', '_').replace('.', '_'), None)
+        if arg_name == "theme.base" and not validate_theme_base(str(arg_value)):
+            raise ValueError(f"Invalid theme.base value: {arg_value}")
+        if arg_name in ["theme.primaryColor", "theme.secondaryBackgroundColor", "theme.textColor"] and not validate_hex_color(str(arg_value)):
+            raise ValueError(f"Invalid color value for {arg_name}: {arg_value}")
+        if arg_name == "server.port" and not validate_port(arg_value):
+            raise ValueError(f"Invalid port value: {arg_value}")
         if arg_value is not None:
             cmd_list.append(f'--{arg_name}')
             cmd_list.append(str(arg_value))
